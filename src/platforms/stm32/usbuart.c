@@ -172,6 +172,9 @@ void usbuart_init(void)
 
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 {
+	/* Some devices require that the usart is disabled before
+	 * changing the usart registers. */
+	usart_disable(USBUSART);
 	usart_set_baudrate(USBUSART, coding->dwDTERate);
 
 	if (coding->bParityType)
@@ -204,6 +207,7 @@ void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 		usart_set_parity(USBUSART, USART_PARITY_EVEN);
 		break;
 	}
+	usart_enable(USBUSART);
 }
 
 /*

@@ -47,6 +47,15 @@
 
 usbd_device * usbdev;
 
+/* TODO: it looks cleaner to move the trace endpoint size definition
+ * to the platform.h files for different targets, because this definition
+ * must be kept in sync with the values used in the 'traceswo(async)' files. */
+#if defined(STM32F7)
+#define TRACE_ENDPOINT_SIZE	512
+#else
+#define TRACE_ENDPOINT_SIZE	64
+#endif
+
 static int configured;
 static int cdcacm_gdb_dtr = 1;
 
@@ -59,11 +68,10 @@ static const struct usb_device_descriptor dev = {
 	.bDeviceClass = 0xEF,		/* Miscellaneous Device */
 	.bDeviceSubClass = 2,		/* Common Class */
 	.bDeviceProtocol = 1,		/* Interface Association */
-#ifdef LM4F
-	.bMaxPacketSize0 = 64,		/*Fixed for icdi*/
-#else
-	.bMaxPacketSize0 = 32,
-#endif
+	/* The USB specification requires that the control endpoint size for high
+	 * speed devices (e.g., stlinkv3) is 64 bytes.
+	 * Best to have its size set to 64 bytes in all cases. */
+	.bMaxPacketSize0 = 64,
 	.idVendor = 0x1D50,
 	.idProduct = 0x6018,
 	.bcdDevice = 0x0100,
@@ -322,7 +330,7 @@ static const struct usb_endpoint_descriptor trace_endp[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x85,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
+	.wMaxPacketSize = TRACE_ENDPOINT_SIZE,
 	.bInterval = 0,
 }};
 
@@ -507,7 +515,7 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	configured = wValue;
 
 	/* GDB interface */
-#if defined(STM32F4) || defined(LM4F)
+#if defined(STM32F4) || defined(LM4F) || defined(STM32F7)
 	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE, gdb_usb_out_cb);
 #else
@@ -528,7 +536,7 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 #if defined(PLATFORM_HAS_TRACESWO)
 	/* Trace interface */
 	usbd_ep_setup(dev, 0x85, USB_ENDPOINT_ATTR_BULK,
-					64, trace_buf_drain);
+					TRACE_ENDPOINT_SIZE, trace_buf_drain);
 #endif
 
 	usbd_register_control_callback(dev,
