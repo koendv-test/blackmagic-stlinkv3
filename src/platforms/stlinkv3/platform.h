@@ -103,17 +103,23 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 #define USB_DRIVER      stm32f723_usb_driver
 #define USB_IRQ	        NVIC_OTG_HS_IRQ
 #define USB_ISR	        otg_hs_isr
+
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART2 preempts USB which may spin while buffer is drained.
  */
-#define IRQ_PRI_USB		(2 << 4)
-#define IRQ_PRI_USBUSART	(1 << 4)
-#define IRQ_PRI_USBUSART_TIM	(3 << 4)
+#define IRQ_PRI_USB		     (1 << 4)
+#define IRQ_PRI_USBUSART	 (2 << 4)
+#define IRQ_PRI_USBUSART_DMA (2 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
-#define IRQ_PRI_SWO_DMA			(1 << 4)
+#define IRQ_PRI_SWO_DMA			(0 << 4)
 
+/* USART6 is on DMA2 Channel 5 , RC Stream 1/2, TX Stream 6/7*/
 #define USBUSART USART6
-#define USBUSART_CR1 USART_CR1(USART6_BASE)
+#define USBUSART_BASE USART6_BASE
+
+#define USBUSART_CR1 USART_CR1(USBUSART_BASE)
+#define USBUSART_RDR USART_RDR(USBUSART_BASE)
+#define USBUSART_TDR USART_TDR(USBUSART_BASE)
 #define USBUSART_IRQ NVIC_USART6_IRQ
 #define USBUSART_CLK RCC_USART6
 #define USBUSART_PORT GPIOG
@@ -122,10 +128,18 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 #define USBUSART_TX_PIN GPIO14
 #define USBUSART_RX_PIN GPIO9
 #define USBUSART_ISR usart6_isr
-#define USBUSART_TIM TIM4
-#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
-#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
-#define USBUSART_TIM_ISR tim4_isr
+
+#define USBUSART_DMA_BUS DMA2
+#define USBUSART_DMA_CLK RCC_DMA2
+#define USBUSART_DMA_TX_CHAN DMA_STREAM6
+#define USBUSART_DMA_TX_IRQ NVIC_DMA2_STREAM6_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma2_stream6_isr(x)
+#define USBUSART_DMA_RX_CHAN DMA_STREAM2
+#define USBUSART_DMA_RX_IRQ NVIC_DMA2_STREAM2_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma2_stream2_isr(x)
+
+/* For STM32F7 DMA trigger source must be specified */
+#define USBUSART_DMA_TRG DMA_SxCR_CHSEL_5
 
 #define UART_PIN_SETUP() {\
 	rcc_periph_clock_enable(USBUSART_PORT_CLKEN); \
