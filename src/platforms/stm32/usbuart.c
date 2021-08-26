@@ -124,7 +124,6 @@ void usbuart_init(void)
 #if !defined(USBUSART_RDR) && defined(USBUSART_DR)
 # define USBUSART_RDR USBUSART_DR
 #endif
-
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uint32_t)&USBUSART_TDR);
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
@@ -405,8 +404,11 @@ void USBUSART_ISR(void)
 
 	/* If line is now idle, then transmit a packet */
 	if (isIdle) {
-#if defined(USART_ICR_IDLECF)
+#if defined(USART_ICR)
 		USART_ICR(USBUSART) = USART_ICR_IDLECF;
+#else
+		/* On the older uarts, the sequence "read flags", "read DR"
+		 * as above cleared the flags */
 #endif
 		usbuart_run();
 	}

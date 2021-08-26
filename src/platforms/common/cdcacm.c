@@ -41,7 +41,6 @@
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dfu.h>
-#include <stdlib.h>
 
 #define DFU_IF_NO 4
 
@@ -61,7 +60,7 @@ static int cdcacm_gdb_dtr = 1;
 
 static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd);
 
-static const struct usb_device_descriptor dev = {
+static const struct usb_device_descriptor dev_desc = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
@@ -560,7 +559,7 @@ void cdcacm_init(void)
 
 	serial_no_read(serial_no);
 
-	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings,
+	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings,
 			    sizeof(usb_strings)/sizeof(char *),
 			    usbd_control_buffer, sizeof(usbd_control_buffer));
 

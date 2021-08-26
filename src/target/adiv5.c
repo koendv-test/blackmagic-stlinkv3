@@ -334,7 +334,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY |	CORTEXM_DHCSR_C_DEBUGEN |
 		CORTEXM_DHCSR_C_HALT;
 	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t dhcsr;
@@ -661,8 +661,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		return;
 	}
 	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
-			   (dp->idcode >> 12) & 0xf,
-			   (dp->idcode & 0x10000) ? "MINDP " : "", dp->idcode >> 28);
+			   (uint8_t)((dp->idcode >> 12) & 0xf),
+			   (dp->idcode & 0x10000) ? "MINDP " : "", (uint16_t)(dp->idcode >> 28));
 	volatile uint32_t ctrlstat = 0;
 #if PC_HOSTED  == 1
 	platform_adiv5_dp_defaults(dp);

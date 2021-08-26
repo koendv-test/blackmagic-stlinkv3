@@ -24,12 +24,10 @@
 
 #include "general.h"
 #include <unistd.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "version.h"
-#include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
 #include "command.h"
@@ -135,6 +133,7 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\t-h\t\t: This help.\n");
 	DEBUG_WARN("\t-v[bitmask]\t: Increasing verbosity. Bitmask:\n");
 	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
+	DEBUG_WARN("\t-l\t\t: List available probes\n");
 	DEBUG_WARN("Probe selection arguments:\n");
 	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at <path>");
 #if HOSTED_BMP_ONLY == 1 && defined(__APPLE__)
@@ -419,7 +418,10 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	}
 	if (opt->opt_flash_start == 0xffffffff)
 		opt->opt_flash_start = lowest_flash_start;
-	if (opt->opt_flash_size == 0xffffffff)
+	if ((opt->opt_flash_size == 0xffffffff) &&
+	    (opt->opt_mode != BMP_MODE_FLASH_WRITE) &&
+	    (opt->opt_mode != BMP_MODE_FLASH_VERIFY) &&
+	    (opt->opt_mode != BMP_MODE_FLASH_WRITE_VERIFY))
 		opt->opt_flash_size = lowest_flash_size;
 	if (opt->opt_mode == BMP_MODE_SWJ_TEST) {
 		switch (t->core[0]) {

@@ -59,6 +59,7 @@ struct rp_priv_s {
 	uint16_t _flash_enter_cmd_xip;
 	uint16_t reset_usb_boot;
 	bool     is_prepared;
+	bool     is_monitor;
 	uint32_t regs[0x20];/* Register playground*/
 };
 
@@ -112,7 +113,7 @@ static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 /* RP ROM functions calls
  *
  * timout == 0: Do not wait for poll, use for reset_usb_boot()
- * timeout > 400 (ms) : display spinner
+ * timeout > 500 (ms) : display spinner
  */
 static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 						uint32_t timeout)
@@ -131,14 +132,23 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	target_halt_resume(t, false);
 	if (!timeout)
 		return false;
-	DEBUG_INFO("Call cmd %04x\n", cmd);
+	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
 	platform_timeout to;
 	platform_timeout_set(&to, timeout);
+	platform_timeout to_spinner;
+	if (timeout > 500)
+		platform_timeout_set(&to_spinner, 500);
+	else
+		/* never trigger if timeout is short */
+		platform_timeout_set(&to_spinner, timeout + 1);
 	do {
-		if (timeout > 400)
-			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
+		if (platform_timeout_is_expired(&to_spinner)) {
+			if (ps->is_monitor)
+				tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
+			platform_timeout_set(&to_spinner, 500);
+		}
 		if (platform_timeout_is_expired(&to)) {
-			DEBUG_WARN("RP Run timout %d ms reached: ", timeout);
+			DEBUG_WARN("RP Run timout %d ms reached: ", (int)timeout);
 			break;
 		}
 	} while (!target_halt_poll(t, NULL));
@@ -146,7 +156,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	target_regs_read(t, dbg_regs);
 	bool ret = ((dbg_regs[REG_PC] &~1) != (ps->_debug_trampoline_end & ~1));
 	if (ret) {
-		DEBUG_WARN("rp_rom_call cmd %04x failed, PC %08" PRIx32 "\n",
+		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n",
 				   cmd, dbg_regs[REG_PC]);
 	}
 	return ret;
@@ -156,11 +166,25 @@ static void rp_flash_prepare(target *t)
 {
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	if (!ps->is_prepared) {
+		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
 		rp_rom_call(t, ps->regs, ps->_connect_internal_flash,100);
 		/* exit_xip */
 		rp_rom_call(t, ps->regs, ps->_flash_exit_xip, 100);
 		ps->is_prepared = true;
+	}
+}
+
+static void rp_flash_resume(target *t)
+{
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	if (ps->is_prepared) {
+		DEBUG_INFO("rp_flash_resume\n");
+		/* flush */
+		rp_rom_call(t, ps->regs, ps->_flash_flush_cache,100);
+		/* enter_cmd_xip */
+		rp_rom_call(t, ps->regs, ps->_flash_enter_cmd_xip, 100);
+		ps->is_prepared = false;
 	}
 }
 
@@ -181,7 +205,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 		DEBUG_WARN("Unaligned len\n");
 		len = (len + 0xfff) & ~0xfff;
 	}
-	DEBUG_INFO("Erase addr %08" PRIx32 " len 0x%" PRIx32 "\n", addr, len);
+	DEBUG_INFO("Erase addr %08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
 	rp_flash_prepare(t);
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
@@ -195,6 +219,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 	addr -= XIP_FLASH_START;
 	if (len > MAX_FLASH)
 		len = MAX_FLASH;
+	bool ret = 0;
 	while (len) {
 		ps->regs[0] = addr;
 		ps->regs[2] = -1;
@@ -202,14 +227,14 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 			ps->regs[1] = MAX_FLASH;
 			ps->regs[3] = FLASHCMD_CHIP_ERASE;
 			DEBUG_WARN("BULK_ERASE\n");
-			rp_rom_call(t, ps->regs, ps->_flash_range_erase, 25100);
+			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 25100);
 			len = 0;
 		} else if (len >= (64 * 1024)) {
 			uint32_t chunk = len & ~((1 << 16) - 1);
 			ps->regs[1] = chunk;
 			ps->regs[3] = FLASHCMD_BLOCK64K_ERASE;
 			DEBUG_WARN("64k_ERASE\n");
-			rp_rom_call(t, ps->regs, ps->_flash_range_erase, 2100);
+			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 2100);
 			len -= chunk ;
 			addr += chunk;
 		} else if (len >= (32 * 1024)) {
@@ -217,7 +242,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 			ps->regs[1] = chunk;
 			ps->regs[3] = FLASHCMD_BLOCK32K_ERASE;
 			DEBUG_WARN("32k_ERASE\n");
-			rp_rom_call(t, ps->regs, ps->_flash_range_erase, 1700);
+			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 1700);
 			len -= chunk;
 			addr += chunk;
 		} else {
@@ -225,18 +250,23 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 			ps->regs[2] = MAX_FLASH;
 			ps->regs[3] = FLASHCMD_SECTOR_ERASE;
 			DEBUG_WARN("Sector_ERASE\n");
-			rp_rom_call(t, ps->regs, ps->_flash_range_erase, 410);
+			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 410);
 			len = 0;
 		}
+		if (ret) {
+			DEBUG_WARN("Erase failed!\n");
+			break;
+		}
 	}
-	DEBUG_INFO("\nErase done!\n");
-	return 0;
+	rp_flash_resume(t);
+	DEBUG_INFO("Erase done!\n");
+	return ret;
 }
 
 int rp_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
-	DEBUG_INFO("RP Write %08" PRIx32 " len 0x%" PRIx32 "\n", dest, len);
+	DEBUG_INFO("RP Write %08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	if ((dest & 0xff) || (len & 0xff)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
@@ -246,6 +276,7 @@ int rp_flash_write(struct target_flash *f,
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	/* Write payload to target ram */
 	dest -= XIP_FLASH_START;
+	bool ret = 0;
 #define MAX_WRITE_CHUNK 0x1000
 	while (len) {
 		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
@@ -254,13 +285,23 @@ int rp_flash_write(struct target_flash *f,
 		ps->regs[0] = dest;
 		ps->regs[1] = SRAM_START;
 		ps->regs[2] = chunksize;
-		rp_rom_call(t, ps->regs, ps->flash_range_program,
-					(3 *  chunksize) >> 8); /* 3 ms per 256 byte page */
+		/* Loading takes 3 ms per 256 byte page
+		 * however it takes much longer if the XOSC is not enabled
+		 * so lets give ourselves a little bit more time (x10)
+		 */
+		ret |= rp_rom_call(t, ps->regs, ps->flash_range_program,
+					(3 *  chunksize * 10) >> 8);
+		if (ret) {
+			DEBUG_WARN("Write failed!\n");
+			break;
+		}
 		len -= chunksize;
 		src += chunksize;
 		dest += chunksize;
 	}
-	return 0;
+	rp_flash_resume(t);
+	DEBUG_INFO("Write done!\n");
+	return ret;
 }
 
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char *argv[])
@@ -284,7 +325,11 @@ static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
 	(void) argv;
 	struct target_flash f;
 	f.t = t;
-	return (rp_flash_erase(&f, XIP_FLASH_START, MAX_FLASH)) ? false: true;
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	ps->is_monitor = true;
+	bool res =  (rp_flash_erase(&f, XIP_FLASH_START, MAX_FLASH)) ? false: true;
+	ps->is_monitor = false;
+	return res;
 }
 
 const struct command_s rp_cmd_list[] = {
