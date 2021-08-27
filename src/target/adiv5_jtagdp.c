@@ -39,9 +39,7 @@
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
 
-static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
-
-void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode)
+void adiv5_jtag_dp_handler(jtag_dev_t *jd)
 {
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 	if (!dp) {			/* calloc failed: heap exhaustion */
@@ -49,8 +47,8 @@ void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode)
 		return;
 	}
 
-	dp->dp_jd_index = jd_index;
-	dp->idcode = j_idcode;
+	dp->dp_jd_index = jd->jd_dev;
+	dp->idcode = jd->jd_idcode;
 	if ((PC_HOSTED == 0 ) || (!platform_jtag_dp_init(dp))) {
 		dp->dp_read = fw_adiv5_jtagdp_read;
 		dp->error = adiv5_jtagdp_error;
@@ -87,23 +85,25 @@ uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, APnDP ? IR_APACC : IR_DPACC);
 
-	platform_timeout_set(&timeout, 2000);
+	platform_timeout_set(&timeout, 20);
 	do {
 		jtag_dev_shift_dr(&jtag_proc, dp->dp_jd_index, (uint8_t*)&response,
 						  (uint8_t*)&request, 35);
 		ack = response & 0x07;
 	} while(!platform_timeout_is_expired(&timeout) && (ack == JTAGDP_ACK_WAIT));
 
-	if (ack == JTAGDP_ACK_WAIT)
-		raise_exception(EXCEPTION_TIMEOUT, "JTAG-DP ACK timeout");
-
+	if (ack == JTAGDP_ACK_WAIT) {
+		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		dp->fault = 1;
+		return 0;
+	}
 	if((ack != JTAGDP_ACK_OK))
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 
 	return (uint32_t)(response >> 3);
 }
 
-static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort)
 {
 	uint64_t request = (uint64_t)abort << 3;
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_ABORT);
