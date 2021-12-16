@@ -30,6 +30,19 @@
 #include "gdb_packet.h"
 #include "morse.h"
 
+#include <sforth/engine.h>
+#include <sforth/sf-arch.h>
+
+
+int sfgetc(void) { return gdb_if_getchar_blocking(); }
+int sffgetc(cell file_id) { return EOF; }
+int sfputc(int c) { bool flag = (c == '\n') ? true : false; gdb_if_putchar_blocking(c, true); }
+int sfsync(void) { return EOF; }
+cell sfopen(const char * pathname, int flags) { return 0; }
+int sfclose(cell file_id) { return EOF; }
+int sffseek(cell stream, long offset) { return -1; }
+
+
 int
 main(int argc, char **argv)
 {
@@ -40,6 +53,13 @@ main(int argc, char **argv)
 	(void) argv;
 	platform_init();
 #endif
+
+	sf_reset();
+	while (1)
+	{
+		//gdb_if_putchar_blocking(gdb_if_getchar_blocking() + 1, true);
+		do_quit();
+	}
 
 	while (true) {
 		volatile struct exception e;

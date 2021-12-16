@@ -39,7 +39,11 @@ static uint8_t double_buffer_out[CDCACM_PACKET_SIZE];
 void gdb_if_putchar(unsigned char c, int flush)
 {
 	buffer_in[count_in++] = c;
-	if(flush || (count_in == CDCACM_PACKET_SIZE)) {
+	if(flush || (count_in == CDCACM_PACKET_SIZE -
+		/* Avoid serial port communication timeout issues
+		 * for usb serial ports, with full-length usb packets.
+		 * Always send short packets (i.e., of length smaller
+		 * than the endpoint size. */ 1)) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
 		if((cdcacm_get_config() != 1) || !cdcacm_get_dtr()) {
@@ -49,7 +53,39 @@ void gdb_if_putchar(unsigned char c, int flush)
 		while(usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
 			buffer_in, count_in) <= 0);
 
-		if (flush && (count_in == CDCACM_PACKET_SIZE)) {
+		if (flush && (count_in == CDCACM_PACKET_SIZE - 1)) {
+			/* We need to send an empty packet for some hosts
+			 * to accept this as a complete transfer. */
+			/* libopencm3 needs a change for us to confirm when
+			 * that transfer is complete, so we just send a packet
+			 * containing a null byte for now.
+			 */
+			while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
+				"\0", 1) <= 0);
+		}
+
+		count_in = 0;
+	}
+}
+
+void gdb_if_putchar_blocking(unsigned char c, int flush)
+{
+	buffer_in[count_in++] = c;
+	if(flush || (count_in == sizeof buffer_in -
+		/* Avoid serial port communication timeout issues
+		 * for usb serial ports, with full-length usb packets.
+		 * Always send short packets (i.e., of length smaller
+		 * than the endpoint size. */ 1)) {
+		/* Refuse to send if USB isn't configured. */
+		if (cdcacm_get_config() != 1)
+		{
+			count_in = 0;
+			return;
+		}
+		while(usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
+			buffer_in, count_in) <= 0);
+
+		if (flush && (count_in == sizeof buffer_in - 1)) {
 			/* We need to send an empty packet for some hosts
 			 * to accept this as a complete transfer. */
 			/* libopencm3 needs a change for us to confirm when
@@ -95,6 +131,16 @@ static void gdb_if_update_buf(void)
 	                                buffer_out, CDCACM_PACKET_SIZE);
 	out_ptr = 0;
 #endif
+}
+
+
+unsigned char gdb_if_getchar_blocking(void)
+{
+
+	while (!(out_ptr < count_out))
+		gdb_if_update_buf();
+
+	return buffer_out[out_ptr++];
 }
 
 unsigned char gdb_if_getchar(void)

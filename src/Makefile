@@ -8,13 +8,14 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
+CFLAGS += -Wall -Wextra -Wno-char-subscripts \
 	-std=gnu99 -g3 -MD -I./target \
 	-I. -Iinclude -I$(PLATFORM_DIR)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
 endif
+CFLAGS += -DCORE_CELLS_COUNT="16 * 1024" -DSTACK_DEPTH=16
 
 SRC =			\
 	adiv5.c		\
@@ -59,6 +60,12 @@ SRC =			\
 	stm32l4.c	\
 	stm32g0.c	\
 	target.c	\
+	sforth/engine.c	\
+	sforth/sf-arch-default.c	\
+	sforth/sf-opt-file.c	\
+	sforth/sf-opt-prog-tools.c	\
+	sforth/sf-opt-sample.c	\
+	sforth/sf-opt-string.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
