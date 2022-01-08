@@ -5,7 +5,8 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 OPT_FLAGS = -Og -g
 CFLAGS += -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../libopencm3/include \
-	-I platforms/stm32
+	-I platforms/stm32 \
+	-I ../../sforth/
 LDFLAGS_BOOT := $(LDFLAGS) -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	--specs=nano.specs -lopencm3_stm32f7 \
 	-Wl,-T,platforms/stlinkv3/stlinkv3.ld -nostartfiles -lc \
@@ -38,6 +39,7 @@ SRC += 	usbuart.c	\
 	timing_stm32.c	\
 	traceswoasync_f723.c	\
 	traceswodecode.c	\
+	sforth-dictionary.c	\
 
 ifeq ($(PLATFORM_HAS_SLCAN), 1)
 SRC += stm32-slcan.c

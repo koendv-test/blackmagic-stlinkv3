@@ -43,6 +43,8 @@ int sfclose(cell file_id) { return EOF; }
 int sffseek(cell stream, long offset) { return -1; }
 
 
+void hw_init(void);
+
 int
 main(int argc, char **argv)
 {
@@ -55,6 +57,7 @@ main(int argc, char **argv)
 #endif
 
 	sf_reset();
+	hw_init();
 	while (1)
 	{
 		//gdb_if_putchar_blocking(gdb_if_getchar_blocking() + 1, true);
