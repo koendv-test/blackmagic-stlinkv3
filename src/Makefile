@@ -15,7 +15,7 @@ CFLAGS += -Wall -Wextra -Wno-char-subscripts \
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
 endif
-CFLAGS += -DCORE_CELLS_COUNT="16 * 1024" -DSTACK_DEPTH=16
+CFLAGS += -DCORE_CELLS_COUNT="12 * 1024" -DSTACK_DEPTH=16
 
 SRC =			\
 	adiv5.c		\

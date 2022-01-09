@@ -36,8 +36,8 @@
 
 int sfgetc(void) { return gdb_if_getchar_blocking(); }
 int sffgetc(cell file_id) { return EOF; }
-int sfputc(int c) { bool flag = (c == '\n') ? true : false; gdb_if_putchar_blocking(c, true); }
-int sfsync(void) { return EOF; }
+int sfputc(int c) { bool flag = (c == '\n') ? true : false; gdb_if_putchar_blocking(c, flag); }
+int sfsync(void) { gdb_flush(); }
 cell sfopen(const char * pathname, int flags) { return 0; }
 int sfclose(cell file_id) { return EOF; }
 int sffseek(cell stream, long offset) { return -1; }
@@ -55,6 +55,7 @@ main(int argc, char **argv)
 #endif
 
 	sf_reset();
+	sf_eval("true cr-echo !");
 	while (1)
 	{
 		//gdb_if_putchar_blocking(gdb_if_getchar_blocking() + 1, true);

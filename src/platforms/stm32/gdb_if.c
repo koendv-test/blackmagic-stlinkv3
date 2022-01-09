@@ -68,14 +68,11 @@ void gdb_if_putchar(unsigned char c, int flush)
 	}
 }
 
-void gdb_if_putchar_blocking(unsigned char c, int flush)
+
+void gdb_flush(void)
 {
-	buffer_in[count_in++] = c;
-	if(flush || (count_in == sizeof buffer_in -
-		/* Avoid serial port communication timeout issues
-		 * for usb serial ports, with full-length usb packets.
-		 * Always send short packets (i.e., of length smaller
-		 * than the endpoint size. */ 1)) {
+	if (count_in)
+	{
 		/* Refuse to send if USB isn't configured. */
 		if (cdcacm_get_config() != 1)
 		{
@@ -83,21 +80,21 @@ void gdb_if_putchar_blocking(unsigned char c, int flush)
 			return;
 		}
 		while(usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
-			buffer_in, count_in) <= 0);
-
-		if (flush && (count_in == sizeof buffer_in - 1)) {
-			/* We need to send an empty packet for some hosts
-			 * to accept this as a complete transfer. */
-			/* libopencm3 needs a change for us to confirm when
-			 * that transfer is complete, so we just send a packet
-			 * containing a null byte for now.
-			 */
-			while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
-				"\0", 1) <= 0);
-		}
-
-		count_in = 0;
+					buffer_in, count_in) <= 0);
 	}
+
+	count_in = 0;
+}
+
+void gdb_if_putchar_blocking(unsigned char c, int flush)
+{
+	buffer_in[count_in++] = c;
+	if(flush || count_in == sizeof buffer_in -
+		/* Avoid serial port communication timeout issues
+		 * for usb serial ports, with full-length usb packets.
+		 * Always send short packets (i.e., of length smaller
+		 * than the endpoint size. */ 1)
+			gdb_flush();
 }
 
 #ifdef STM32F4
