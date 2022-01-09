@@ -122,7 +122,7 @@ endif
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
+	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES) sforth/*.o sforth/*.d
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
 
 all_platforms:
