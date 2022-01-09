@@ -47,7 +47,6 @@ extern char _ebss[];
 
 void platform_init(void)
 {
-	volatile uint32_t *magic = (uint32_t *)_ebss;
 	/* Enable GPIO peripherals */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOC);
@@ -56,6 +55,9 @@ void platform_init(void)
 #else
 	rcc_periph_clock_enable(RCC_GPIOD);
 #endif
+
+#if 0
+	volatile uint32_t *magic = (uint32_t *)_ebss;
 	/* Check the USER button*/
 	if (gpio_get(GPIOA, GPIO0) ||
 		((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1)))
@@ -73,6 +75,8 @@ void platform_init(void)
 		SYSCFG_MEMRM |= 1;
 		scb_reset_core();
 	}
+#endif
+
 #ifdef BLACKPILL
 	rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[RCC_CLOCK_3V3_84MHZ]);
 #else
@@ -84,7 +88,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Set up USB Pins and alternate function*/
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO12);
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO10 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10 | GPIO11 | GPIO12);
 
 #ifdef BLACKPILL

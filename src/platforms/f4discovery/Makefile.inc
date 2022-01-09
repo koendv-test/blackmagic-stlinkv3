@@ -1,5 +1,6 @@
 CROSS_COMPILE ?= arm-none-eabi-
 BMP_BOOTLOADER ?=
+BLACKPILL ?= 1
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
