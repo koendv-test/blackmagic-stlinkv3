@@ -42,6 +42,7 @@ cell sfopen(const char * pathname, int flags) { return 0; }
 int sfclose(cell file_id) { return EOF; }
 int sffseek(cell stream, long offset) { return -1; }
 
+void hw_init(void);
 
 int
 main(int argc, char **argv)
@@ -55,6 +56,7 @@ main(int argc, char **argv)
 #endif
 
 	sf_reset();
+	hw_init();
 	sf_eval("true cr-echo !");
 	while (1)
 	{
