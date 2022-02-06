@@ -202,6 +202,18 @@ int server_socket_fd, connection_socket_fd;
 		char buf[512];
 		target_lock();
 		int i = snprintf(buf, sizeof buf, "bmp connection, target at 0x%p, shutting down\n", cur_target);
+
+		if (cur_target)
+		{
+			unsigned x;
+			if (target_mem_read(cur_target, & x, /* address */ 0, sizeof x))
+				i += snprintf(buf + i, sizeof buf - i, "target memory read error\n");
+			else
+				i += snprintf(buf + i, sizeof buf - i, "memory at 0: 0x%08x\n", (uint32_t) x);
+		}
+		else
+			i += snprintf(buf + i, sizeof buf - i, "target unavailable\n");
+
 		target_unlock();
 		fflush(stderr);
 		send(connection_socket_fd, buf, i, 0);
