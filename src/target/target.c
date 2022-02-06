@@ -23,6 +23,26 @@
 
 #include <stdarg.h>
 
+#if PC_HOSTED == 1
+#include <pthread.h>
+extern pthread_mutex_t pandora_box;
+#endif
+
+
+void target_lock(void)
+{
+#if PC_HOSTED == 1
+	pthread_mutex_lock(& pandora_box);
+#endif
+}
+
+void target_unlock(void)
+{
+#if PC_HOSTED == 1
+	pthread_mutex_unlock(& pandora_box);
+#endif
+}
+
 target *target_list = NULL;
 
 static int target_flash_write_buffered(struct target_flash *f,

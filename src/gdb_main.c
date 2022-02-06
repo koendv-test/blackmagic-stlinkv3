@@ -50,7 +50,7 @@ enum gdb_signal {
 
 static char pbuf[BUF_SIZE+1];
 
-static target *cur_target;
+target *cur_target;
 static target *last_target;
 
 static void handle_q_packet(char *packet, int len);
@@ -102,6 +102,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
+		target_lock();
 		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
@@ -327,6 +328,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacketz("");
 		}
+		target_unlock();
 	}
 }
 

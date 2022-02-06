@@ -20,6 +20,7 @@
 /* Handle different BMP pc-hosted platforms/
  */
 
+#include "platform.h"
 #include "general.h"
 #include "jtagtap.h"
 #include "target.h"

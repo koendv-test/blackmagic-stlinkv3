@@ -51,10 +51,12 @@ enum
 	DEFAULT_PORT		= 2000,
 };
 
+
+pthread_mutex_t pandora_box = PTHREAD_MUTEX_INITIALIZER;
 static struct
 {
-pthread_t thread;
-pthread_attr_t attr;
+	pthread_t thread;
+	pthread_attr_t attr;
 }
 sidekick_data;
 
@@ -197,7 +199,10 @@ int server_socket_fd, connection_socket_fd;
 		connection_socket_fd = socket_accept(server_socket_fd);
 		(void) connection_socket_fd;
 		DEBUG_WARN("sidekick got a connection\n");
+		char buf[512];
+		int i = snprintf(buf, sizeof buf, "bmp connection, target at 0x%p, shutting down\n", cur_target);
 		fflush(stderr);
+		send(connection_socket_fd, buf, i, 0);
 		shutdown(connection_socket_fd, /* SHUT_RDWR */ 2);
 		close(connection_socket_fd);
 	}

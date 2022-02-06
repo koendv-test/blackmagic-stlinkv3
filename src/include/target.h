@@ -31,6 +31,11 @@
 #include <sys/types.h>
 
 typedef struct target_s target;
+extern target * cur_target;
+
+void target_lock(void);
+void target_unlock(void);
+
 typedef uint32_t target_addr;
 struct target_controller;
 

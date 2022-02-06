@@ -1,6 +1,7 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
+#include <stdint.h>
 #include "timing.h"
 
 char *platform_ident(void);

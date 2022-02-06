@@ -1,6 +1,7 @@
 #if !defined(__BMP_LIBUSB_H)
 #define      __BMP_LIBUSB_H
 
+#include "platform.h"
 #include "cl_utils.h"
 
 #if HOSTED_BMP_ONLY != 1
