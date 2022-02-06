@@ -184,10 +184,12 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 
 			/* Wait for target halt */
 			while(!(reason = target_halt_poll(cur_target, &watch))) {
+				target_unlock();
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
 				}
+				target_lock();
 			}
 			SET_RUN_STATE(0);
 
