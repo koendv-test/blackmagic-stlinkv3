@@ -185,11 +185,24 @@ static int create_socket(int port, int * socket_fd)
 
 static void * sidekick(void * param)
 {
-int socket_fd;
+int server_socket_fd, connection_socket_fd;
 
 	(void) param;
-	DEBUG_WARN("sidekick listening on port %i\n", create_socket(SIDEKICK_PORT - 1, & socket_fd));
+	int t = create_socket(SIDEKICK_PORT - 1, & server_socket_fd);
+	DEBUG_WARN("sidekick listening on port %i\n", t);
 	fflush(stderr);
+
+	while (1)
+	{
+		connection_socket_fd = socket_accept(server_socket_fd);
+		(void) connection_socket_fd;
+		DEBUG_WARN("sidekick got a connection\n");
+		fflush(stderr);
+		shutdown(connection_socket_fd, /* SHUT_RDWR */ 2);
+		close(connection_socket_fd);
+	}
+	shutdown(server_socket_fd, /* SHUT_RDWR */ 2);
+	close(server_socket_fd);
 
 	DEBUG_WARN("sidekick thread bailing out\n");
 	fflush(stderr);
@@ -220,8 +233,8 @@ int gdb_if_init(void)
 		DEBUG_WARN("pthread_create() error\n");
 		exit(1);
 	}
-
-	DEBUG_WARN("Listening on TCP: %4d\n", create_socket(DEFAULT_PORT - 1, & gdb_if_serv));
+	int t = create_socket(DEFAULT_PORT - 1, & gdb_if_serv);
+	DEBUG_WARN("Listening on TCP: %4d\n", t);
 
 	return 0;
 }
