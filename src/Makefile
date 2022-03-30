@@ -32,6 +32,7 @@ SRC =			\
 	gdb_hostio.c	\
 	gdb_packet.c	\
 	hex_utils.c	\
+	jtag_devs.c	\
 	jtag_scan.c	\
 	lmi.c		\
 	lpc_common.c	\
@@ -67,7 +68,13 @@ SRC =			\
 	sforth/sf-opt-sample.c	\
 	sforth/sf-opt-string.c	\
 
+
 include $(PLATFORM_DIR)/Makefile.inc
+
+ifneq ($(PC_HOSTED),1)
+# Output memory usage information
+LDFLAGS += -Wl,--print-memory-usage
+endif
 
 OPT_FLAGS ?= -Os
 CFLAGS += $(OPT_FLAGS)
