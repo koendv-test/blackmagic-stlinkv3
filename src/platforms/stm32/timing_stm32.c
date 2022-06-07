@@ -25,7 +25,7 @@
 
 uint8_t running_status;
 static volatile uint32_t time_ms;
-uint32_t swd_delay_cnt = 0;
+uint32_t swd_delay_cnt = 5;
 
 static int morse_tick;
 
