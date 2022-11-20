@@ -23,11 +23,12 @@
  */
 
 #include "general.h"
-#include "cdcacm.h"
-#include "usbuart.h"
+#include "usb.h"
+#include "aux_serial.h"
 #include "morse.h"
 
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/usb/dwc/otg_fs.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
@@ -36,10 +37,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
-
-#ifdef BLACKPILL
-#include <libopencm3/usb/dwc/otg_fs.h>
-#endif
 
 
 jmp_buf fatal_error_jmpbuf;
@@ -51,14 +48,11 @@ void platform_init(void)
 	/* Enable GPIO peripherals */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOC);
-#ifdef BLACKPILL
-	rcc_periph_clock_enable(RCC_GPIOB);
-#else
 	rcc_periph_clock_enable(RCC_GPIOD);
-#endif
+
 	/* Check the USER button*/
-	if (gpio_get(GPIOA, GPIO0) ||
-		((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1)))
+	if (0 && (!gpio_get(GPIOA, GPIO0) ||
+		((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))))
 	{
 		magic[0] = 0;
 		magic[1] = 0;
@@ -122,17 +116,17 @@ void platform_init(void)
 #endif
 
 	platform_timing_init();
-	usbuart_init();
-	cdcacm_init();
 #ifdef BLACKPILL
 	// https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001
 	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS | OTG_GCCFG_PWRDWN;
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 #endif
+	blackmagic_usb_init();
+	aux_serial_init();
 }
 
-void platform_srst_set_val(bool assert) { (void)assert; }
-bool platform_srst_get_val(void) { return false; }
+void platform_nrst_set_val(bool assert) { (void)assert; }
+bool platform_nrst_get_val(void) { return false; }
 
 const char *platform_target_voltage(void)
 {
@@ -153,8 +147,13 @@ bool platform_target_get_power(void)
 	return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
 }
 
-void platform_target_set_power(bool power)
+void platform_target_set_power(const bool power)
 {
 	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 }
 #endif
+
+void platform_target_clk_output_enable(bool enable)
+{
+	(void)enable;
+}

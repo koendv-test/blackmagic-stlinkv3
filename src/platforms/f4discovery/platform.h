@@ -21,8 +21,9 @@
 /* This file implements the platform specific functions for the STM32
  * implementation.
  */
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+
+#ifndef PLATFORMS_F4DISCOVERY_PLATFORM_H
+#define PLATFORMS_F4DISCOVERY_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -109,13 +110,13 @@
  * LED2 = 	PD12	(Red LED    : Error)
  * LED3 = 	PD15	(Blue LED   : Bootloader active)
  *
- * nTRST = 	PC1
- * SRST_OUT =   PC8
- * TDI = 	PC2
- * TMS = 	PC4 (input for SWDP)
- * TCK = 	PC5/SWCLK
- * TDO = 	PC6 (input for TRACESWO
- * nSRST =
+ * nTRST =    PC1
+ * nRST_OUT = PC8
+ * TDI =      PC2
+ * TMS =      PC4 (input for SWDP)
+ * TCK =      PC5/SWCLK
+ * TDO =      PC6 (input for TRACESWO
+ * nRST =     PC8
  *
  * Force DFU mode button: PA0
  */
@@ -138,8 +139,8 @@
 
 #define TRST_PORT	GPIOC
 #define TRST_PIN	GPIO1
-#define SRST_PORT	GPIOC
-#define SRST_PIN	GPIO8
+#define NRST_PORT	GPIOC
+#define NRST_PIN	GPIO8
 
 #define LED_PORT	GPIOD
 #define LED_PORT_UART	GPIOD
@@ -167,21 +168,7 @@
 #define USBUSART_DMA_RX_ISR(x) dma1_stream1_isr(x)
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
-#endif
 
-#define BOOTMAGIC0 0xb007da7a
-#define BOOTMAGIC1 0xbaadfeed
-
-#define TMS_SET_MODE() \
-	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
-	                GPIO_PUPD_NONE, TMS_PIN);
-#define SWDIO_MODE_FLOAT() \
-	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, \
-	                GPIO_PUPD_NONE, SWDIO_PIN);
-
-#define SWDIO_MODE_DRIVE() \
-	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
-	                GPIO_PUPD_NONE, SWDIO_PIN);
 #define UART_PIN_SETUP() do { \
 	gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
 	                USBUSART_TX_PIN); \
@@ -194,39 +181,6 @@
 					GPIO_OSPEED_100MHZ, USBUSART_RX_PIN); \
 	gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_RX_PIN); \
 } while(0)
-
-#define USB_DRIVER      stm32f107_usb_driver
-#define USB_IRQ         NVIC_OTG_FS_IRQ
-#define USB_ISR(x)      otg_fs_isr(x)
-/* Interrupt priorities.  Low numbers are high priority.
- * TIM3 is used for traceswo capture and must be highest priority.
- */
-#define IRQ_PRI_USB		(1 << 4)
-#define IRQ_PRI_USBUSART	(2 << 4)
-#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
-#define IRQ_PRI_TRACE		(0 << 4)
-
-
-#define TRACE_TIM TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ   NVIC_TIM3_IRQ
-#define TRACE_ISR(x) tim3_isr(x)
-
-#define gpio_set_val(port, pin, val) do {	\
-	if(val)					\
-		gpio_set((port), (pin));	\
-	else					\
-		gpio_clear((port), (pin));	\
-} while(0)
-
-#define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
-#define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
-
-static inline int platform_hwversion(void)
-{
-	return 0;
-}
 
 /*
  * Use newlib provided integer only stdio functions
@@ -261,4 +215,56 @@ static inline int platform_hwversion(void)
 #define snprintf sniprintf
 #endif
 
-#endif
+#endif /* else BLACKPILL */
+
+#define SET_RUN_STATE(state)	{running_status = (state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
+#define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
+
+#define BOOTMAGIC0 0xb007da7a
+#define BOOTMAGIC1 0xbaadfeed
+
+/* Interrupt priorities.  Low numbers are high priority.
+ * TIM3 is used for traceswo capture and must be highest priority.
+ */
+#define IRQ_PRI_USB		(1 << 4)
+#define IRQ_PRI_USBUSART	(2 << 4)
+#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
+#define IRQ_PRI_TRACE		(0 << 4)
+
+
+#define TRACE_TIM TIM3
+#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
+#define TRACE_IRQ   NVIC_TIM3_IRQ
+#define TRACE_ISR(x) tim3_isr(x)
+
+#define gpio_set_val(port, pin, val) do {	\
+	if(val)					\
+		gpio_set((port), (pin));	\
+	else					\
+		gpio_clear((port), (pin));	\
+} while(0)
+
+#define USB_DRIVER      stm32f107_usb_driver
+#define USB_IRQ         NVIC_OTG_FS_IRQ
+#define USB_ISR(x)      otg_fs_isr(x)
+
+#define TMS_SET_MODE() \
+	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
+	                GPIO_PUPD_NONE, TMS_PIN);
+#define SWDIO_MODE_FLOAT() \
+	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, \
+	                GPIO_PUPD_NONE, SWDIO_PIN);
+
+#define SWDIO_MODE_DRIVE() \
+	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
+	                GPIO_PUPD_NONE, SWDIO_PIN);
+
+#define UART_PIN_SETUP() do{}while(0)
+
+static inline int platform_hwversion(void)
+{
+	return 0;
+}
+
+#endif /* PLATFORMS_F4DISCOVERY_PLATFORM_H */

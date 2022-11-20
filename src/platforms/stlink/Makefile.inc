@@ -25,15 +25,19 @@ else
 LDFLAGS += --specs=nosys.specs
 endif
 
+ifeq ($(SWIM_AS_UART), 1)
+CFLAGS += -DSWIM_AS_UART=1
+else
+SRC += traceswoasync.c
+endif
+
 VPATH += platforms/stm32
 
-SRC += 	cdcacm.c	\
-	usbuart.c 	\
+SRC +=          \
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
 	traceswodecode.c	\
-	traceswoasync.c	\
 	stlink_common.c \
 
 ifeq ($(ST_BOOTLOADER), 1)
@@ -47,4 +51,3 @@ blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f1.o stlink_common.o serialno.o
 
 host_clean:
 	-$(Q)$(RM) *.bin *elf *hex
-
