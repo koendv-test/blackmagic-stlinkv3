@@ -47,6 +47,36 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define DESIG_UNIQUE_ID_BASE DESIG_UNIQUE_ID_BASE_452
 
 /* Hardware definitions... */
+// deliberately choosing new pin names,
+// so old bit-banging code gives an error
+
+#define SWD_SPI         SPI5
+#define SWD_FREQ        rcc_apb2_frequency
+#define SWD_MOSI_PORT   GPIOF
+#define SWD_MOSI_PIN    GPIO9
+#define SWD_MISO_PORT   GPIOH
+#define SWD_MISO_PIN    GPIO7
+#define SWD_SCK_PORT    GPIOH
+#define SWD_SCK_PIN     GPIO6
+
+
+// "monitor frequency", platform_max_frequency_set()
+#define DECIMAL_FREQUENCY 1
+extern uint32_t spi_clock_divisor;
+
+#ifdef SWD_SPI
+// assign dummy pins to jtag for now
+#define TDI_PORT	GPIOI
+#define TMS_PORT	GPIOI
+#define TCK_PORT	GPIOI
+#define TDO_PORT	GPIOI
+#define TDI_PIN		GPIO1
+#define TMS_PIN		GPIO9
+#define TCK_PIN		GPIO6
+#define TDO_PIN		GPIO2
+#endif
+
+#ifndef SWD_SPI
 #define TDI_PORT	GPIOA
 #define TMS_PORT	GPIOF
 #define TCK_PORT	GPIOH
@@ -62,6 +92,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define SWDIO_IN_PIN  GPIO7
 #define SWDIO_PIN     TMS_PIN
 #define SWCLK_PIN	  TCK_PIN
+#endif
 
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO6

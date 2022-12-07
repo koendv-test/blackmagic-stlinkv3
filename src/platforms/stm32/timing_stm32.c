@@ -67,6 +67,7 @@ uint32_t platform_time_ms(void)
 	return time_ms;
 }
 
+#ifndef SWD_SPI
 /* Assume some USED_SWD_CYCLES per clock
  * and  CYCLES_PER_CNT Cycles per delay loop cnt with 2 delay loops per clock
  */
@@ -93,3 +94,34 @@ uint32_t platform_max_frequency_get(void)
 	ret /= USED_SWD_CYCLES + CYCLES_PER_CNT * swd_delay_cnt;
 	return ret;
 }
+#endif
+
+#ifdef SWD_SPI
+
+#include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/rcc.h>
+
+// support for 'monitor frequency" command.
+// platform_max_frequency_set() sets the spi_clock_divisor
+
+void platform_max_frequency_set(uint32_t freq)
+{
+	spi_clock_divisor = 7;
+	for (int i = 0; i < 8; i++) {
+		if (freq >= (SWD_FREQ >> (i + 1))) {
+			spi_clock_divisor = i;
+			break;
+		}
+	}
+	spi_disable(SWD_SPI);
+	spi_set_baudrate_prescaler(SWD_SPI, spi_clock_divisor);
+	spi_enable(SWD_SPI);
+}
+
+uint32_t platform_max_frequency_get(void)
+{
+	int32_t freq = SWD_FREQ >> (spi_clock_divisor + 1);
+	return freq;
+}
+
+#endif

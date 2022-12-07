@@ -184,9 +184,13 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOD);
-	rcc_periph_clock_enable(RCC_GPIOH);
 	rcc_periph_clock_enable(RCC_GPIOF);
 	rcc_periph_clock_enable(RCC_GPIOG);
+	rcc_periph_clock_enable(RCC_GPIOH);
+	rcc_periph_clock_enable(RCC_GPIOI);
+#ifdef SWD_SPI
+	rcc_periph_clock_enable(RCC_SPI5);
+#endif
 
 	/* Initialize ADC. */
 	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
@@ -201,6 +205,7 @@ void platform_init(void)
 	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, SRST_PIN);
 	gpio_set(SRST_PORT, SRST_PIN);
 
+#ifndef SWD_SPI
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
 	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);
 	gpio_mode_setup(SWDIO_IN_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, SWDIO_IN_PIN);
@@ -212,6 +217,7 @@ void platform_init(void)
 	/* Drive the tck/swck pin low. */
 	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
 	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN);
+#endif
 
 	/* Drive direction switch pin. */
 	gpio_mode_setup(TMS_DRIVE_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_DRIVE_PIN);
@@ -223,6 +229,11 @@ void platform_init(void)
 	gpio_mode_setup(PWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_EN_PIN);
 	gpio_set_output_options(PWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, PWR_EN_PIN);
 	gpio_set(PWR_EN_PORT, PWR_EN_PIN);
+
+#if 0
+	extern swd_spi_init();
+	swd_spi_init();
+#endif
 
 	/* Set up MCO at 8 MHz on PA8 */
 #define MCO1_PORT GPIOA
@@ -272,5 +283,6 @@ void platform_init(void)
 	slcan_init();
 #endif
 	/* By default, do not drive the swd bus too fast. */
-	platform_max_frequency_set(6000000);
+	//platform_max_frequency_set(6000000);
+	//platform_max_frequency_set(0);
 }

@@ -275,8 +275,28 @@ bool cmd_frequency(target *t, int argc, char **argv)
 	uint32_t freq = platform_max_frequency_get();
 	if (freq == FREQ_FIXED)
 		gdb_outf("SWJ freq fixed\n");
-	else
+	else {
+#ifdef DECIMAL_FREQUENCY
+		uint32_t freq_integer, freq_hundredths;
+		char prefix;
+		if (freq > 1000000) {
+			freq_integer = freq / 1000000;
+			freq_hundredths = (freq - freq_integer * 1000000) / 10000;
+			prefix = 'M';
+		} else if (freq > 1000) {
+			freq_integer = freq / 1000;
+			freq_hundredths = (freq - freq_integer * 1000) / 10;
+			prefix = 'k';
+		} else {
+			freq_integer = freq;
+			freq_hundredths = 0;
+			prefix = ' ';
+		}
+		gdb_outf("Max SWJ freq %" PRId32 ".%02" PRId32 " %cHz\n", freq_integer, freq_hundredths, prefix);
+#else
 		gdb_outf("Max SWJ freq %08" PRIx32 "\n", freq);
+#endif
+	}
 	return true;
 
 }
